@@ -37,9 +37,9 @@ public:
   }
 
   // Handle uncompressed image messages
-  void process_message(const rclcpp::SerializedMessage & serialized_msg,
+  void process_raw_message(const rclcpp::SerializedMessage & serialized_msg,
                      const std::string & topic,
-                     size_t index) override
+                     size_t index)
   {
       // Deserialize the incoming uncompressed image message
       sensor_msgs::msg::Image img;
@@ -82,9 +82,9 @@ public:
   }
 
   // Handle compressed image messages
-  void process_compressed_message(const rclcpp::SerializedMessage & serialized_msg,
+  void process_message(const rclcpp::SerializedMessage & serialized_msg,
                                   const std::string & topic,
-                                  size_t index)
+                                  size_t index) override
   {
     // Deserialize the incoming compressed image message
     sensor_msgs::msg::CompressedImage compressed_img;

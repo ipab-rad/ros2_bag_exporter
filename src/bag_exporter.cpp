@@ -89,9 +89,12 @@ void BagExporter::load_configuration(const std::string & config_file)
 
 void BagExporter::setup_handlers()
 {
+  // Extract base name from rosbag file
+  std::string rosbag_base_name = std::filesystem::path(bag_path_).stem().string();
+  
   for (const auto & topic : topics_) {
     // Create directory for each topic
-    std::string abs_topic_dir = output_dir_ + "/" + topic.topic_dir;
+    std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name + "/" + topic.topic_dir;
 
     // Initialize handler based on message type
     if (topic.type == MessageType::PointCloud2) {

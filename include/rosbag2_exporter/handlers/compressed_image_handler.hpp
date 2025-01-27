@@ -61,7 +61,6 @@ public:
     std::string timestamp = ss_timestamp.str();
 
     std::string sanitized_topic = topic;
-    // RCLCPP_WARN(logger_, "Topic-> %s", sanitized_topic.c_str());
     if (!sanitized_topic.empty() && sanitized_topic[0] == '/') {
       sanitized_topic = sanitized_topic.substr(1);
     }

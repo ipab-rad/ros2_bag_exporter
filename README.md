@@ -87,16 +87,16 @@ topics:
     type: "DepthImage"
     encoding: "16UC1"
     sample_interval: 10  # Write one sample every 10 messages
-    topic_dir: "depth_raw"  # Output data in <output_dir>/depth_raw
+    topic_dir: "depth_raw"  # Output data in <output_dir>/<bag_name>/depth_raw
   - name: "/camera/color/image_raw"
     type: "Image"
     encoding: "rgb8"
     sample_interval: 5   # Write one sample every 5 messages
-    topic_dir: "color_raw"  # Output data in <output_dir>/color_raw
+    topic_dir: "img/color_raw"  # Output data in <output_dir>/<bag_name>/img/color_raw
   - name: "/camera/color/image_raw/compressed"
     type: "CompressedImage"
     sample_interval: 5   # Write one sample every 5 messages
-    topic_dir: "img/compressed"  # Output data in <output_dir>/img/compressed
+    topic_dir: "img/compressed"
   - name: "/imu_topic"
     type: "IMU"
     sample_interval: 100  # Write one sample every 100 messages
@@ -121,7 +121,7 @@ topics:
   - **name**: The ROS 2 topic name.
   - **type**: The message type (PointCloud2, Image, DepthImage, IMU, GPS, etc.).
   - **sample_interval**: The interval at which messages will be written (e.g., 100 for every 100 messages).
-  - **topic_dir**: The name of the directory where data will be saved. The directory is created in `output_dir`.
+  - **topic_dir**: The name of the directory where data will be saved. The directory is created in `<output_dir>/<bag_name>/`.
 
 ## Usage
 After building and sourcing the workspace, run the `bag_exporter` node using the following command:

@@ -53,6 +53,7 @@ public:
       pcl::fromROSMsg(pc2, *cloud);
       save_pointcloud_to_file<pcl::PointXYZ>(cloud, topic, pc2, index);  // Explicitly specify template type
     }
+
   }
 
 private:
@@ -79,6 +80,8 @@ private:
 
     // Construct filename
     std::string filename = topic_dir_ + "/" + timestamp + ".pcd";
+
+    data_meta_vec_.push_back(DataMeta{filename, pc2.header.stamp, index});
 
     // Save the point cloud
     if (pcl::io::savePCDFileBinary(filename, *cloud) == -1) {

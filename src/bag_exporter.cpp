@@ -5,6 +5,10 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include "rosbag2_exporter/bag_exporter.hpp"
+#include "rosbag2_exporter/utils.hpp"
+#include <chrono>
+#include <fstream>
+#include <yaml-cpp/yaml.h>
 
 namespace rosbag2_exporter
 {
@@ -35,6 +39,9 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
 
   // Start exporting
   export_bag();
+
+  // Create Metadata
+  create_metadata_file();
 }
 
 void BagExporter::load_configuration(const std::string & config_file)
@@ -90,11 +97,11 @@ void BagExporter::load_configuration(const std::string & config_file)
 void BagExporter::setup_handlers()
 {
   // Extract base name from rosbag file
-  std::string rosbag_base_name = std::filesystem::path(bag_path_).stem().string();
+  rosbag_base_name_ = std::filesystem::path(bag_path_).stem().string();
   
   for (const auto & topic : topics_) {
     // Create directory for each topic
-    std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name + "/" + topic.topic_dir;
+    std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name_ + "/" + topic.topic_dir;
 
     // Initialize handler based on message type
     if (topic.type == MessageType::PointCloud2) {
@@ -162,8 +169,10 @@ void BagExporter::export_bag()
     }
   }
 
+  auto start_time_point = std::chrono::high_resolution_clock::now();
+  // Global id counter
+  size_t global_id = 0;
   // Read and process messages
-  size_t total_messages = 0;
   while (reader.has_next()) {
     auto serialized_msg = reader.read_next();
     std::string topic = serialized_msg->topic_name;
@@ -193,19 +202,96 @@ void BagExporter::export_bag()
           ser_msg.get_rcl_serialized_message().buffer_length = buffer_length;
 
           // Process the message
-          handler_it->second.handler->process_message(ser_msg, topic, current_index);
+          handler_it->second.handler->process_message(ser_msg, topic, global_id);
         }
       } else {
         RCLCPP_WARN(this->get_logger(), "No configuration found for topic: %s", topic.c_str());
       }
 
       handler_it->second.current_index++;
-      total_messages++;
+      global_id++;
     }
   }
 
-  RCLCPP_INFO(this->get_logger(), "Export completed. Total messages processed: %zu", total_messages);
-  rclcpp::shutdown();
+  auto end_time_point = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end_time_point - start_time_point;
+  double elapsed_time = duration.count();
+
+  RCLCPP_INFO(this->get_logger(), "Export completed. Total messages processed: %zu in %f secs",
+              global_id, elapsed_time);
+}
+
+void BagExporter::create_metadata_file()
+{
+
+  // YAML C++ preserves list order, so topics_[0] corresponds to  
+  // the first sensor defined in the YAML file, used as the time sync reference.
+  auto & main_sensor_handler = handlers_[topics_[0].name].handler;
+  RCLCPP_INFO(this->get_logger(), "Main sensor topic: %s", topics_[0].name.c_str());
+
+  std::vector<size_t> msg_index(topics_.size(), 0);
+
+  // Define YAML root
+  YAML::Node root;
+
+  size_t sync_group_id = 0;
+
+  // Co-relate other sensors timestamps based on main sensor
+  for (auto &main_data_meta : main_sensor_handler->data_meta_vec_)
+  {
+    YAML::Node sync_group;
+    sync_group["id"] = sync_group_id;
+    sync_group["stamp"]["sec"] = main_data_meta.timestamp.sec;
+    sync_group["stamp"]["nanosec"] = main_data_meta.timestamp.nanosec;
+    sync_group["lidar"]["global_id"] = main_data_meta.global_id;
+    sync_group["lidar"]["file"] = main_data_meta.data_path;
+
+    auto& curr_lidar_time = main_data_meta.timestamp;
+
+    // Where the cameras' YAML data willl be saved
+    YAML::Node cameras;
+
+    // Find closest timestamp for each camera
+    for (int k = 0; k < topics_.size(); k++)
+    {
+        // Only process camera messages
+        if (topics_[k].type != MessageType::Image &&
+            topics_[k].type != MessageType::CompressedImage &&
+            topics_[k].type != MessageType::DepthImage &&
+            topics_[k].type != MessageType::IRImage)
+        {
+            continue;
+        }
+
+        // Get current camera metadata
+        auto &curr_cam_handler = handlers_[topics_[k].name].handler;
+        auto &current_meta_data_vec = curr_cam_handler->data_meta_vec_;
+        size_t closest_time_index = find_closest_timestamp(current_meta_data_vec,
+                                                            curr_lidar_time, msg_index[k]);
+        
+        // Create YAML metadata based on the found time index
+        auto &current_cam_meta = current_meta_data_vec[closest_time_index];
+        YAML::Node cam;
+        cam["global_id"] = current_cam_meta.global_id;
+        cam["name"] = get_cam_name(topics_[k].name);
+        cam["file"] = current_cam_meta.data_path;
+
+        cameras.push_back(cam);
+    }
+
+    // Finish YAML data
+    sync_group["cameras"] = cameras;
+    root["time_sync_groups"].push_back(sync_group);
+
+    // Save the file in the rosbag output directory
+    std::string yaml_path = output_dir_ + "/" + rosbag_base_name_ + "/" + "time_sync_metadata.yaml";
+    std::ofstream yaml_file(yaml_path);
+    yaml_file << root;
+    yaml_file.close();
+
+    ++sync_group_id;
+
+  }
 }
 
 }  // namespace rosbag2_exporter

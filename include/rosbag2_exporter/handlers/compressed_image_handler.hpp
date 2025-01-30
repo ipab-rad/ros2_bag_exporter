@@ -78,6 +78,8 @@ public:
     outfile.write(reinterpret_cast<const char*>(compressed_img.data.data()), compressed_img.data.size());
     outfile.close();
 
+    data_meta_vec_.push_back(DataMeta{filepath, compressed_img.header.stamp, index});
+
     RCLCPP_INFO(logger_, "Successfully wrote compressed image to %s", filepath.c_str());
   }
 

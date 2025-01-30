@@ -88,7 +88,8 @@ public:
     if (!cv::imwrite(filepath, depth_image)) {
       RCLCPP_ERROR(logger_, "Failed to write depth image to %s", filepath.c_str());
     } else {
-      RCLCPP_INFO(logger_, "Successfully wrote depth image to %s", filepath.c_str());
+        data_meta_vec_.push_back(DataMeta{filepath, img.header.stamp, index});
+        RCLCPP_INFO(logger_, "Successfully wrote depth image to %s", filepath.c_str());
     }
   }
 

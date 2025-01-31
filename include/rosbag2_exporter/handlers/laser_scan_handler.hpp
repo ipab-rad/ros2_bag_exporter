@@ -43,8 +43,7 @@ public:
     std::string filepath = topic_dir_ + "/" + timestamp + ".csv";
 
     // Ensure the directory exists, create if necessary
-    if (!std::filesystem::exists(topic_dir_)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
+    if (!std::filesystem::exists(topic_dir_)) {  
       std::filesystem::create_directories(topic_dir_);
     }
 

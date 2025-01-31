@@ -110,7 +110,6 @@ private:
 
     // Ensure the directory exists, create if necessary
     if (!std::filesystem::exists(topic_dir_)) {
-      RCLCPP_INFO(logger_, "Creating directory: %s", topic_dir_.c_str());
       std::filesystem::create_directories(topic_dir_);
     }
 

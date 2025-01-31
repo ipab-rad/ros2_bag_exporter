@@ -312,7 +312,7 @@ void BagExporter::create_metadata_file()
   }
 
   // Save the file in the rosbag output directory
-  std::string yaml_path = output_dir_ + "/" + rosbag_base_name_ + "/" + "time_sync_metadata.yaml";
+  std::string yaml_path = output_dir_ + "/" + rosbag_base_name_ + "/" + "export_metadata.yaml";
   std::ofstream yaml_file(yaml_path);
   yaml_file << root;
   yaml_file.close();

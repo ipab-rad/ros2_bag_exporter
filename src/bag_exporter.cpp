@@ -153,21 +153,25 @@ void BagExporter::export_bag()
   }
 
   // Get topic metadata
-  auto metadata = reader.get_all_topics_and_types();
+  auto metadata = reader.get_metadata().topics_with_message_count;
 
   // Initialize handlers based on available topics
+  size_t total_bag_messages = 0;
   for (auto & [topic_name, handler] : handlers_) {
     auto it = std::find_if(metadata.begin(), metadata.end(),
-      [&topic_name](const rosbag2_storage::TopicMetadata & tm) {
-        return tm.name == topic_name;
+      [&topic_name](const rosbag2_storage::TopicInformation & ti) {
+        return ti.topic_metadata.name == topic_name;
       });
     if (it == metadata.end()) {
-      RCLCPP_WARN(this->get_logger(), "Topic '%s' not found in the bag.", topic_name.c_str());
+      RCLCPP_WARN(this->get_logger(), "Topic '%s' not found in the bag \U0000274C", topic_name.c_str());
       handler.handler.reset(); // Remove handler if topic not found
     } else {
-      RCLCPP_INFO(this->get_logger(), "Topic '%s' is available.", topic_name.c_str());
+      RCLCPP_INFO(this->get_logger(), "'%s' topic found \U00002705", topic_name.c_str());
+      total_bag_messages += it->message_count;
     }
   }
+
+  RCLCPP_INFO(this->get_logger(), "Extracting data ...");
 
   auto start_time_point = std::chrono::high_resolution_clock::now();
   // Global id counter
@@ -210,6 +214,10 @@ void BagExporter::export_bag()
 
       handler_it->second.current_index++;
       global_id++;
+
+      // Log progress
+      print_progress(static_cast<int>(std::round((global_id * 100.0) / total_bag_messages)));
+            
     }
   }
 
@@ -217,7 +225,7 @@ void BagExporter::export_bag()
   std::chrono::duration<double> duration = end_time_point - start_time_point;
   double elapsed_time = duration.count();
 
-  RCLCPP_INFO(this->get_logger(), "Export completed. Total messages processed: %zu in %f secs",
+  RCLCPP_INFO(this->get_logger(), "%zu messages were extracted and exported in %f secs \U0001F525",
               global_id, elapsed_time);
 }
 
@@ -227,7 +235,8 @@ void BagExporter::create_metadata_file()
   // YAML C++ preserves list order, so topics_[0] corresponds to  
   // the first sensor defined in the YAML file, used as the time sync reference.
   auto & main_sensor_handler = handlers_[topics_[0].name].handler;
-  RCLCPP_INFO(this->get_logger(), "Main sensor topic: %s", topics_[0].name.c_str());
+  RCLCPP_INFO(this->get_logger(), "Using '%s' timestamp for cameras' time synchronisation",
+              topics_[0].name.c_str());
 
   std::vector<size_t> msg_index(topics_.size(), 0);
 
@@ -279,19 +288,20 @@ void BagExporter::create_metadata_file()
         cameras.push_back(cam);
     }
 
-    // Finish YAML data
+    // Complete YAML sync group
     sync_group["cameras"] = cameras;
     root["time_sync_groups"].push_back(sync_group);
 
-    // Save the file in the rosbag output directory
-    std::string yaml_path = output_dir_ + "/" + rosbag_base_name_ + "/" + "time_sync_metadata.yaml";
-    std::ofstream yaml_file(yaml_path);
-    yaml_file << root;
-    yaml_file.close();
-
     ++sync_group_id;
-
   }
+
+  // Save the file in the rosbag output directory
+  std::string yaml_path = output_dir_ + "/" + rosbag_base_name_ + "/" + "time_sync_metadata.yaml";
+  std::ofstream yaml_file(yaml_path);
+  yaml_file << root;
+  yaml_file.close();
+
+  RCLCPP_INFO(this->get_logger(), " \U0001F680 Metadata file created in: \033[36m%s\033[0m", yaml_path.c_str());
 }
 
 }  // namespace rosbag2_exporter

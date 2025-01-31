@@ -62,6 +62,36 @@ size_t find_closest_timestamp(const std::vector<DataMeta>& target_vector,
     return closest_index;
 }
 
+// Helper to  produce a stdout progress bar
+void print_progress(int percentage) {
+    // Static is safe as this runs only until 100% is reached 
+    static int last_percentage = -1;
+
+    // Never exceeds 100%
+    if (percentage > 100) percentage = 100;
+    // Prevent duplicate prints 
+    if (percentage == last_percentage) return; 
+
+    last_percentage = percentage;
+
+    int width = 50;
+    int pos = width * percentage / 100;
+
+    std::cout << "\r\t\t\t\t\t\t [";
+    for (int i = 0; i < width; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+
+    std::cout << "] " << percentage << "%" << std::flush;
+
+    // Print a newline once at 100%
+    if (percentage >= 100)
+        std::cout << std::endl;  
+}
+
+
 } // namespace rosbag2_exporter
 
 #endif // UTILS_HPP

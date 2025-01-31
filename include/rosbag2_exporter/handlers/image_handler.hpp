@@ -119,7 +119,7 @@ private:
       RCLCPP_ERROR(logger_, "Failed to write image to %s", filepath.c_str());
     } else {
       data_meta_vec_.push_back(DataMeta{filepath, timestamp, index});
-      RCLCPP_INFO(logger_, "Successfully wrote image to %s", filepath.c_str());
+      RCLCPP_DEBUG(logger_, "Successfully wrote image to %s", filepath.c_str());
     }
   }
 };

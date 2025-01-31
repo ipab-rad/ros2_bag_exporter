@@ -81,7 +81,7 @@ public:
       RCLCPP_ERROR(logger_, "Failed to write IR image to %s", filepath.c_str());
     } else {
         data_meta_vec_.push_back(DataMeta{filepath, img.header.stamp, index});
-        RCLCPP_INFO(logger_, "Successfully wrote IR image to %s", filepath.c_str());
+        RCLCPP_DEBUG(logger_, "Successfully wrote IR image to %s", filepath.c_str());
     }
   }
 

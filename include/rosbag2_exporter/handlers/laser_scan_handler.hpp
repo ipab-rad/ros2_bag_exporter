@@ -84,7 +84,7 @@ public:
     }
 
     outfile.close();
-    RCLCPP_INFO(logger_, "Successfully wrote LaserScan data to %s", filepath.c_str());
+    RCLCPP_DEBUG(logger_, "Successfully wrote LaserScan data to %s", filepath.c_str());
   }
 
 private:

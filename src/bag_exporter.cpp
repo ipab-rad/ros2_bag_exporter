@@ -253,6 +253,13 @@ void BagExporter::create_metadata_file()
     sync_group["stamp"]["sec"] = main_data_meta.timestamp.sec;
     sync_group["stamp"]["nanosec"] = main_data_meta.timestamp.nanosec;
     sync_group["lidar"]["global_id"] = main_data_meta.global_id;
+
+    // Save file name relative to rosbag_base_name_
+    std::string abs_path_prefix = output_dir_ + "/" + rosbag_base_name_ + "/";
+    if (main_data_meta.data_path.find(abs_path_prefix) == 0)
+    {
+        main_data_meta.data_path.erase(0, abs_path_prefix.length());
+    }
     sync_group["lidar"]["file"] = main_data_meta.data_path;
 
     auto& curr_lidar_time = main_data_meta.timestamp;
@@ -283,6 +290,11 @@ void BagExporter::create_metadata_file()
         YAML::Node cam;
         cam["global_id"] = current_cam_meta.global_id;
         cam["name"] = get_cam_name(topics_[k].name);
+        
+        // Save file name relative to rosbag_base_name_
+        if (current_cam_meta.data_path.find(abs_path_prefix) == 0) { 
+          current_cam_meta.data_path.erase(0, abs_path_prefix.length());  
+        }
         cam["file"] = current_cam_meta.data_path;
 
         cameras.push_back(cam);

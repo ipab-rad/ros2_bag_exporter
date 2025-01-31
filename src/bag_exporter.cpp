@@ -243,6 +243,10 @@ void BagExporter::create_metadata_file()
   // Define YAML root
   YAML::Node root;
 
+  // Save which rosbag was used to extract the data
+  root["rosbags"] = YAML::Node(YAML::NodeType::Sequence);
+  root["rosbags"].push_back(std::filesystem::path(bag_path_).filename().string());
+
   size_t sync_group_id = 0;
 
   // Co-relate other sensors timestamps based on main sensor

@@ -28,7 +28,7 @@ std::string get_cam_name(const std::string& path) {
 
 // Helper function to convert builtin_interfaces::msg::Time to nanoseconds
 int64_t toNanoseconds(const builtin_interfaces::msg::Time& timestamp) {
-    return static_cast<int64_t>(timestamp.sec) * 1'000'000'000 + timestamp.nanosec;
+    return static_cast<int64_t>(timestamp.sec) * std::pow(10, 9) + timestamp.nanosec;
 }
 
 // Function to find the closest index in a sorted vector for a given timestamp

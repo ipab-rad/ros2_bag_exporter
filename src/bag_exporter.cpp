@@ -268,7 +268,7 @@ void BagExporter::create_metadata_file()
 
     auto& curr_lidar_time = main_data_meta.timestamp;
 
-    // Where the cameras' YAML data willl be saved
+    // Where the cameras' YAML data will be saved
     YAML::Node cameras;
 
     // Find closest timestamp for each camera

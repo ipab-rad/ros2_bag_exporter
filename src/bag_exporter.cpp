@@ -80,15 +80,10 @@ void BagExporter::load_configuration(const std::string & config_file)
       } else if (type == "CompressedImage") {
         tc.type = MessageType::CompressedImage;
         tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "rgb8"; // default encoding
-      } else if (type == "DepthImage") {
-        tc.type = MessageType::DepthImage;
-        tc.encoding = topic["encoding"] ? topic["encoding"].as<std::string>() : "16UC1"; // default encoding
       } else if (type == "IMU") {
         tc.type = MessageType::IMU;
       } else if (type == "GPS") {
         tc.type = MessageType::GPS;
-      } else if (type == "LaserScan") {
-        tc.type = MessageType::LaserScan;
       } else {
         tc.type = MessageType::Unknown;
       }
@@ -128,20 +123,11 @@ void BagExporter::setup_handlers()
     } else if (topic.type == MessageType::CompressedImage) {
       auto handler = std::make_shared<CompressedImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
-    } else if (topic.type == MessageType::DepthImage) {
-      auto handler = std::make_shared<DepthImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
-    } else if (topic.type == MessageType::IRImage) {
-      auto handler = std::make_shared<IRImageHandler>(abs_topic_dir, topic.encoding, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::IMU) {
       auto handler = std::make_shared<IMUHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else if (topic.type == MessageType::GPS) {
       auto handler = std::make_shared<GPSHandler>(abs_topic_dir, this->get_logger());
-      handlers_[topic.name] = Handler{handler, 0};
-    } else if (topic.type == MessageType::LaserScan) {
-      auto handler = std::make_shared<LaserScanHandler>(abs_topic_dir, this->get_logger());
       handlers_[topic.name] = Handler{handler, 0};
     } else {
       RCLCPP_WARN(this->get_logger(), "Unsupported message type for topic '%s'. Skipping.", topic.name.c_str());
@@ -293,9 +279,7 @@ void BagExporter::create_metadata_file()
     {
         // Only process camera messages
         if (topics_[k].type != MessageType::Image &&
-            topics_[k].type != MessageType::CompressedImage &&
-            topics_[k].type != MessageType::DepthImage &&
-            topics_[k].type != MessageType::IRImage)
+            topics_[k].type != MessageType::CompressedImage)
         {
             continue;
         }

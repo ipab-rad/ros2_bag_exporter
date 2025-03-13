@@ -37,11 +37,19 @@ BagExporter::BagExporter(const rclcpp::NodeOptions & options)
   // Setup handlers based on topics
   setup_handlers();
 
+  auto start_time_point = std::chrono::high_resolution_clock::now();
+
   // Start exporting
   export_bag();
 
   // Create Metadata
   create_metadata_file();
+
+  auto end_time_point = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end_time_point - start_time_point;
+  double elapsed_time = duration.count();
+
+  RCLCPP_INFO(this->get_logger(), "Sensor data exportation took %f secs \U0001F525", elapsed_time);
 }
 
 void BagExporter::load_configuration(const std::string & config_file)
@@ -180,7 +188,6 @@ void BagExporter::export_bag()
 
   RCLCPP_INFO(this->get_logger(), "Extracting data ...");
 
-  auto start_time_point = std::chrono::high_resolution_clock::now();
   // Global id counter
   size_t global_id = 0;
   // Read and process messages
@@ -228,12 +235,6 @@ void BagExporter::export_bag()
     }
   }
 
-  auto end_time_point = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> duration = end_time_point - start_time_point;
-  double elapsed_time = duration.count();
-
-  RCLCPP_INFO(this->get_logger(), "%zu messages were extracted in %f secs \U0001F525",
-              global_id, elapsed_time);
 }
 
 void BagExporter::create_metadata_file()
@@ -343,7 +344,7 @@ void BagExporter::create_metadata_file()
   yaml_file << root;
   yaml_file.close();
 
-  RCLCPP_INFO(this->get_logger(), " \U0001F680 Metadata file created in: \033[36m%s\033[0m", yaml_path.c_str());
+  RCLCPP_INFO(this->get_logger(), "\U0001F680 Metadata file created in: \033[36m%s\033[0m", yaml_path.c_str());
 }
 
 }  // namespace rosbag2_exporter

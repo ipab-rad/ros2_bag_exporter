@@ -89,6 +89,8 @@ public:
       save_image(cv_ptr->image, topic, img.header.stamp, index);
   }
 
+  bool save_msg_to_file(size_t index) override { return false; }
+
 private:
   std::string topic_dir_;
   std::string encoding_;

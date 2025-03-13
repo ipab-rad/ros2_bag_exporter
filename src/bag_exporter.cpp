@@ -53,6 +53,8 @@ void BagExporter::load_configuration(const std::string & config_file)
     bag_path_ = config["bag_path"].as<std::string>();
     output_dir_ = config["output_dir"].as<std::string>();
     storage_id_ = config["storage_id"].as<std::string>();
+    
+    RCLCPP_INFO(this->get_logger(), "Reading from:\n \033[35m%s\033[0m", bag_path_.c_str());
 
     for (const auto & topic : config["topics"]) {
       TopicConfig tc;
@@ -102,6 +104,11 @@ void BagExporter::setup_handlers()
   for (const auto & topic : topics_) {
     // Create directory for each topic
     std::string abs_topic_dir = output_dir_ + "/" + rosbag_base_name_ + "/" + topic.topic_dir;
+
+    // Ensure the directory exists, create if necessary
+    if (!std::filesystem::exists(abs_topic_dir)) {
+      std::filesystem::create_directories(abs_topic_dir);
+    }
 
     // Initialize handler based on message type
     if (topic.type == MessageType::PointCloud2) {
@@ -225,7 +232,7 @@ void BagExporter::export_bag()
   std::chrono::duration<double> duration = end_time_point - start_time_point;
   double elapsed_time = duration.count();
 
-  RCLCPP_INFO(this->get_logger(), "%zu messages were extracted and exported in %f secs \U0001F525",
+  RCLCPP_INFO(this->get_logger(), "%zu messages were extracted in %f secs \U0001F525",
               global_id, elapsed_time);
 }
 
@@ -248,15 +255,24 @@ void BagExporter::create_metadata_file()
   root["rosbags"].push_back(std::filesystem::path(bag_path_).filename().string());
 
   size_t sync_group_id = 0;
+  size_t total_sync_groups = main_sensor_handler->data_meta_vec_.size();
 
   // Co-relate other sensors timestamps based on main sensor
-  for (auto &main_data_meta : main_sensor_handler->data_meta_vec_)
-  {
+  RCLCPP_INFO(this->get_logger(), "Creating metadata and exporting messages as files ...");
+  for (size_t idx = 0; idx < total_sync_groups; ++idx) {
+    DataMeta & main_data_meta = main_sensor_handler->data_meta_vec_[idx];
     YAML::Node sync_group;
     sync_group["id"] = sync_group_id;
     sync_group["stamp"]["sec"] = main_data_meta.timestamp.sec;
     sync_group["stamp"]["nanosec"] = main_data_meta.timestamp.nanosec;
     sync_group["lidar"]["global_id"] = main_data_meta.global_id;
+
+    // Save this pointcloud
+    if (! main_sensor_handler->save_msg_to_file(idx)){
+      RCLCPP_WARN(
+        this->get_logger(), "Unable to save pointcloud msg as file, global_id: %li",
+        main_data_meta.global_id);
+    }
 
     // Save file name relative to rosbag_base_name_
     std::string abs_path_prefix = output_dir_ + "/" + rosbag_base_name_ + "/";
@@ -290,11 +306,18 @@ void BagExporter::create_metadata_file()
                                                             curr_lidar_time, msg_index[k]);
         
         // Create YAML metadata based on the found time index
-        auto &current_cam_meta = current_meta_data_vec[closest_time_index];
+        auto current_cam_meta = current_meta_data_vec[closest_time_index];
         YAML::Node cam;
         cam["global_id"] = current_cam_meta.global_id;
         cam["name"] = get_cam_name(topics_[k].name);
         
+        // Save this image
+        if (!curr_cam_handler->save_msg_to_file(closest_time_index)) {
+          RCLCPP_WARN(
+            this->get_logger(), "Unable to save image msg as file, global_id: %li",
+            main_data_meta.global_id);
+        }
+
         // Save file name relative to rosbag_base_name_
         if (current_cam_meta.data_path.find(abs_path_prefix) == 0) { 
           current_cam_meta.data_path.erase(0, abs_path_prefix.length());  
@@ -309,6 +332,9 @@ void BagExporter::create_metadata_file()
     root["time_sync_groups"].push_back(sync_group);
 
     ++sync_group_id;
+
+    // Log progress
+    print_progress(static_cast<int>(std::round((sync_group_id * 100.0) / total_sync_groups)));
   }
 
   // Save the file in the rosbag output directory
